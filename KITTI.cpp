@@ -152,6 +152,7 @@ int KITTI::getOneVel(std::vector<veloPoint> &points, int j)
         px+=4; py+=4; pz+=4; pr+=4;
     }
     fclose(stream);
+    delete data;
     return points.size();
 }
 
