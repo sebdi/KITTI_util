@@ -30,15 +30,24 @@ std::string &trim(std::string &s) {
     return ltrim(rtrim(s));
 }
 
-KITTI::KITTI()
+KITTI::KITTI(int sequence, int max) : sequence(sequence)
 {
-    path_to_image_0 = "/home/sebastian/Dropbox/KITTI/sequences/00/image_0/";
-    path_to_image_2 = "/home/sebastian/Dropbox/KITTI/sequences/00/image_2/";
-    path_to_velo = "/home/sebastian/Dropbox/KITTI/velo/00/";
-    pathPoses = "/home/sebastian/Dropbox/KITTI/poses";
-
-    int num = 1150000;
+    std::stringstream ss;
+    ss << std::setw(2) << std::setfill('0') << sequence;
+    std::string seq_prefix = ss.str();
+    path_to_image_0 = "/home/sebastian/Dropbox/KITTI/sequences/" + seq_prefix + "/image_0/";
+    path_to_image_2 = "/home/sebastian/Dropbox/KITTI/sequences/" + seq_prefix + "/image_2/";
+    path_to_velo = "/home/sebastian/Dropbox/KITTI/velo/" + seq_prefix;
+    pathPoses = "/home/sebastian/Dropbox/KITTI/poses/" + seq_prefix + ".txt";
+    result_dir = "/home/sebastian/Dropbox/KITTI/results";
     getFiles(path_to_velo, velo_files);
+    getFiles(path_to_image_0, image_0_files);
+    width = 1240;
+    height = 376;
+    seq_size = velo_files.size();
+
+    getGtCameraPoses(gt_T);
+    gt_T.resize(max);
 }
 
 void KITTI::writeResult(std::vector<Eigen::Matrix4d> Ts)
@@ -65,11 +74,11 @@ int KITTI::getFiles(std::string source, std::vector<std::string> &files)
 {
     if(getdir(source, files) >= 0)
     {
-        printf("found %d image files in folder %s!\n", (int)files.size(), source.c_str());
+        printf("found %d files in folder %s!\n", (int)files.size(), source.c_str());
     }
     else if(getFile(source, files) >= 0)
     {
-        printf("found %d image files in file %s!\n", (int)files.size(), source.c_str());
+        printf("found %d files in file %s!\n", (int)files.size(), source.c_str());
     }
     else
     {
@@ -349,7 +358,7 @@ void KITTI::getGtCameraPoses(std::vector<Eigen::Matrix4d> &Ts)
 int KITTI::getGtCameraPoses(std::vector<Eigen::Matrix3d> &Rs, std::vector<Eigen::Vector3d> &ts)
 {
 
-    std::string  filepath = pathPoses +"/03.txt";
+    std::string  filepath = pathPoses;
     std::cout << "Try to get poses from :" << filepath << std::endl;
     std::ifstream f(filepath.c_str());
 
@@ -390,4 +399,125 @@ int KITTI::getGtCameraPoses(std::vector<Eigen::Matrix3d> &Rs, std::vector<Eigen:
         f.close();
         return -1;
     }
+}
+
+Eigen::Matrix3f KITTI::getK()
+{
+    Eigen::Matrix3f K;
+    K << 7.188560e+02, 0.000000e+00, 6.071928e+02, 0.000000e+00, 7.188560e+02, 1.852157e+02, 0.000000e+00, 0.000000e+00, 1.000000e+00;
+    return K;
+}
+
+cv::Mat KITTI::getImage_0(int i)
+{
+    std::cout << "Getting image " << i << ": " << image_0_files[i] << std::endl;
+
+    // now loads directly a grayscale image
+    cv::Mat imageDist = cv::imread(image_0_files[i], cv::IMREAD_GRAYSCALE);
+    cv::Mat grayImg;
+    if (imageDist.channels() == 1)
+        grayImg = imageDist;
+    else
+    {
+        std::cout << "// I don't know why crashes!" << std::endl;
+        cv::cvtColor(imageDist, grayImg, cv::COLOR_RGB2GRAY);
+    }
+    cv::Mat smallImage = cv::Mat(width,height,CV_8UC1);
+    cv::Rect roi(0, 0, width, height);
+    cv::Mat image_roi = grayImg(roi);
+    image_roi.copyTo(smallImage);
+    return cv::Mat(smallImage);
+}
+
+int KITTI::getWidth()
+{
+    return width;
+}
+
+int KITTI::getHeight()
+{
+    return height;
+}
+
+Eigen::Matrix3Xd KITTI::getP0()
+{
+    Eigen::Matrix3Xd P0(3,4);
+    P0 << 7.188560000000e+02, 0.000000000000e+00, 6.071928000000e+02, 0.000000000000e+00, 0.000000000000e+00, 7.188560000000e+02, 1.852157000000e+02, 0.000000000000e+00, 0.000000000000e+00, 0.000000000000e+00, 1.000000000000e+00, 0.000000000000e+00;
+    return P0;
+}
+
+Eigen::Matrix4d KITTI::get_T_velo_to_cam()
+{
+    Eigen::Matrix3d velo_to_cam_R;
+    velo_to_cam_R << 7.967514e-03, -9.999679e-01, -8.462264e-04, -2.771053e-03, 8.241710e-04, -9.999958e-01, 9.999644e-01, 7.969825e-03, -2.764397e-03;
+    Eigen::Vector3d velo_to_cam_t;
+    velo_to_cam_t << -1.377769e-02, -5.542117e-02, -2.918589e-01;
+    Eigen::Matrix4d T;
+    T << velo_to_cam_R(0,0), velo_to_cam_R(0,1), velo_to_cam_R(0,2), velo_to_cam_t(0),
+            velo_to_cam_R(1,0), velo_to_cam_R(1,1), velo_to_cam_R(1,2), velo_to_cam_t(1),
+            velo_to_cam_R(2,0), velo_to_cam_R(2,1), velo_to_cam_R(2,2), velo_to_cam_t(2),
+            0 , 0 , 0 ,1;
+    return T;
+}
+
+bool KITTI::eval (std::vector<Eigen::Matrix4d> & T_result) {
+  std::string error_dir      = result_dir + "/errors";
+  std::string plot_path_dir  = result_dir + "/plot_path";
+  std::string plot_error_dir = result_dir + "/plot_error";
+
+  // create output directories
+  system(("mkdir " + error_dir).c_str());
+  system(("mkdir " + plot_path_dir).c_str());
+  system(("mkdir " + plot_error_dir).c_str());
+
+  // total errors
+  std::vector<errors> total_err;
+
+  // for all sequences do
+  for (int32_t i=sequence; i<sequence+1; i++) {
+
+    // file name
+    char file_name[256];
+    sprintf(file_name,"%02d.txt",i);
+
+    // check for errors
+    if (gt_T.size()==0 || T_result.size()!=gt_T.size()) {
+        std::cout << "[ERROR]: std::vector sizes are wrong. gt_T.size()=" << gt_T.size()
+                  << ", T_result.size()=" << T_result.size() << std::endl;
+      return false;
+    }
+
+    // compute sequence errors
+    std::vector<errors> seq_err = calcSequenceErrors(gt_T,T_result);
+
+    // add to total errors
+    total_err.insert(total_err.end(),seq_err.begin(),seq_err.end());
+
+    // for first half => plot trajectory and compute individual stats
+    if (i<=15) {
+
+      // save + plot bird's eye view trajectories
+      savePathPlot(gt_T,T_result,plot_path_dir + "/" + file_name);
+      std::vector<int32_t> roi = computeRoi(gt_T,T_result);
+      plotPathPlot(plot_path_dir,roi,i);
+
+      // save + plot individual errors
+      char prefix[16];
+      sprintf(prefix,"%02d",i);
+      saveErrorPlots(seq_err,plot_error_dir,prefix);
+      plotErrorPlots(plot_error_dir,prefix);
+    }
+  }
+
+  // save + plot total errors + summary statistics
+  if (total_err.size()>0) {
+    char prefix[16];
+    sprintf(prefix,"avg");
+    saveErrorPlots(total_err,plot_error_dir,prefix);
+    plotErrorPlots(plot_error_dir,prefix);
+    saveStats(total_err,result_dir);
+  }
+
+  // success
+    return true;
 }
