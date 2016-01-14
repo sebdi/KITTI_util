@@ -160,9 +160,14 @@ private:
         return sqrt(dx*dx+dy*dy+dz*dz);
     }
 
-    inline Eigen::Matrix4d poseDelta(Eigen::Matrix4d &T_first, Eigen::Matrix4d &T_last)
+    Eigen::Matrix4d poseDelta(Eigen::Matrix4d &T_first, Eigen::Matrix4d &T_last)
     {
-        return T_first.inverse()*T_last;
+        std::cout << "pose delta" << std::endl;
+        std::cout << "T_fist: " << T_first << std::endl;
+        std::cout << "T_last: " << T_last << std::endl;
+        Eigen::Matrix4d T_delta = T_first.inverse()*T_last;
+        std::cout << "T_delta: " << T_delta << std::endl;
+        return T_delta;
     }
 
     std::vector<errors> calcSequenceErrors (std::vector<Eigen::Matrix4d> &T_result,std::vector<Eigen::Matrix4d> &T_gt) {
@@ -196,8 +201,10 @@ private:
 
           // compute rotational and translational errors
           Eigen::Matrix4d T_error = computeError(T_result);
+          std::cout << "T_error=" << T_error << std::endl;
           double r_err = rotationError(T_error);
           double t_err = translationError(T_error);
+          std::cout << "t_err=" << t_err << std::endl;
 
           // compute speed
           float num_frames = (float)(last_frame-first_frame+1);

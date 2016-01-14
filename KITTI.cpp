@@ -41,6 +41,7 @@ KITTI::KITTI(int sequence, int max) : sequence(sequence)
     pathPoses = "/home/sebastian/Dropbox/KITTI/poses/" + seq_prefix + ".txt";
     result_dir = "/home/sebastian/Dropbox/KITTI/results";
     getFiles(path_to_velo, velo_files);
+    velo_files.resize(max);
     getFiles(path_to_image_0, image_0_files);
     width = 1240;
     height = 376;
@@ -118,6 +119,7 @@ int KITTI::getVel(std::vector<std::string> &files, std::vector<std::vector<veloP
             temp.push_back(point);
             px+=4; py+=4; pz+=4; pr+=4;
         }
+        free(data);
         std::cout << "velopoints size" << temp.size() << std::endl;
         points.push_back(temp);
         fclose(stream);
@@ -152,7 +154,7 @@ int KITTI::getOneVel(std::vector<veloPoint> &points, int j)
         px+=4; py+=4; pz+=4; pr+=4;
     }
     fclose(stream);
-    delete data;
+    free(data);
     return points.size();
 }
 
@@ -489,7 +491,7 @@ bool KITTI::eval (std::vector<Eigen::Matrix4d> & T_result) {
     }
 
     // compute sequence errors
-    std::vector<errors> seq_err = calcSequenceErrors(gt_T,T_result);
+    std::vector<errors> seq_err = calcSequenceErrors(T_result,gt_T);
 
     // add to total errors
     total_err.insert(total_err.end(),seq_err.begin(),seq_err.end());
