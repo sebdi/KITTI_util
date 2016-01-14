@@ -30,7 +30,7 @@ std::string &trim(std::string &s) {
     return ltrim(rtrim(s));
 }
 
-KITTI::KITTI(int sequence, int max) : sequence(sequence)
+KITTI::KITTI(int sequence, int max, int startOffset) : sequence(sequence)
 {
     std::stringstream ss;
     ss << std::setw(2) << std::setfill('0') << sequence;
@@ -47,8 +47,8 @@ KITTI::KITTI(int sequence, int max) : sequence(sequence)
     height = 376;
     seq_size = velo_files.size();
 
-    getGtCameraPoses(gt_T);
-    gt_T.resize(max);
+    getGtCameraPoses(gt_T,startOffset);
+    gt_T.resize(max-startOffset);
 }
 
 void KITTI::writeResult(std::vector<Eigen::Matrix4d> Ts)
@@ -339,12 +339,12 @@ void KITTI::getGtCameraPosesAsNavMsg(std::vector<nav_msgs::Odometry> &out)
     }
 }
 
-void KITTI::getGtCameraPoses(std::vector<Eigen::Matrix4d> &Ts)
+void KITTI::getGtCameraPoses(std::vector<Eigen::Matrix4d> &Ts, int startOffset)
 {
     std::vector<Eigen::Matrix3d> Rs;
     std::vector<Eigen::Vector3d> ts;
     getGtCameraPoses(Rs,ts);
-    for (int i=0;i<Rs.size();i++)
+    for (int i=startOffset;i<Rs.size();i++)
     {
         Eigen::Matrix3d velo_to_cam_R = Rs[i];
         Eigen::Vector3d velo_to_cam_t = ts[i];
@@ -464,63 +464,63 @@ Eigen::Matrix4d KITTI::get_T_velo_to_cam()
 }
 
 bool KITTI::eval (std::vector<Eigen::Matrix4d> & T_result) {
-  std::string error_dir      = result_dir + "/errors";
-  std::string plot_path_dir  = result_dir + "/plot_path";
-  std::string plot_error_dir = result_dir + "/plot_error";
+    std::string error_dir      = result_dir + "/errors";
+    std::string plot_path_dir  = result_dir + "/plot_path";
+    std::string plot_error_dir = result_dir + "/plot_error";
 
-  // create output directories
-  system(("mkdir " + error_dir).c_str());
-  system(("mkdir " + plot_path_dir).c_str());
-  system(("mkdir " + plot_error_dir).c_str());
+    // create output directories
+    system(("mkdir " + error_dir).c_str());
+    system(("mkdir " + plot_path_dir).c_str());
+    system(("mkdir " + plot_error_dir).c_str());
 
-  // total errors
-  std::vector<errors> total_err;
+    // total errors
+    std::vector<errors> total_err;
 
-  // for all sequences do
-  for (int32_t i=sequence; i<sequence+1; i++) {
+    // for all sequences do
+    for (int32_t i=sequence; i<sequence+1; i++) {
 
-    // file name
-    char file_name[256];
-    sprintf(file_name,"%02d.txt",i);
+        // file name
+        char file_name[256];
+        sprintf(file_name,"%02d.txt",i);
 
-    // check for errors
-    if (gt_T.size()==0 || T_result.size()!=gt_T.size()) {
-        std::cout << "[ERROR]: std::vector sizes are wrong. gt_T.size()=" << gt_T.size()
-                  << ", T_result.size()=" << T_result.size() << std::endl;
-      return false;
+        // check for errors
+        if (gt_T.size()==0 || T_result.size()!=gt_T.size()) {
+            std::cout << "[ERROR]: std::vector sizes are wrong. gt_T.size()=" << gt_T.size()
+                      << ", T_result.size()=" << T_result.size() << std::endl;
+            return false;
+        }
+
+        // compute sequence errors
+        std::vector<errors> seq_err = calcSequenceErrors(T_result,gt_T);
+
+        // add to total errors
+        total_err.insert(total_err.end(),seq_err.begin(),seq_err.end());
+
+        // for first half => plot trajectory and compute individual stats
+        if (i<=15) {
+
+            // save + plot bird's eye view trajectories
+            savePathPlot(gt_T,T_result,plot_path_dir + "/" + file_name);
+            std::vector<int32_t> roi = computeRoi(gt_T,T_result);
+            plotPathPlot(plot_path_dir,roi,i);
+
+            // save + plot individual errors
+            char prefix[16];
+            sprintf(prefix,"%02d",i);
+            saveErrorPlots(seq_err,plot_error_dir,prefix);
+            plotErrorPlots(plot_error_dir,prefix);
+        }
     }
 
-    // compute sequence errors
-    std::vector<errors> seq_err = calcSequenceErrors(T_result,gt_T);
-
-    // add to total errors
-    total_err.insert(total_err.end(),seq_err.begin(),seq_err.end());
-
-    // for first half => plot trajectory and compute individual stats
-    if (i<=15) {
-
-      // save + plot bird's eye view trajectories
-      savePathPlot(gt_T,T_result,plot_path_dir + "/" + file_name);
-      std::vector<int32_t> roi = computeRoi(gt_T,T_result);
-      plotPathPlot(plot_path_dir,roi,i);
-
-      // save + plot individual errors
-      char prefix[16];
-      sprintf(prefix,"%02d",i);
-      saveErrorPlots(seq_err,plot_error_dir,prefix);
-      plotErrorPlots(plot_error_dir,prefix);
+    // save + plot total errors + summary statistics
+    if (total_err.size()>0) {
+        char prefix[16];
+        sprintf(prefix,"avg");
+        saveErrorPlots(total_err,plot_error_dir,prefix);
+        plotErrorPlots(plot_error_dir,prefix);
+        saveStats(total_err,result_dir);
     }
-  }
 
-  // save + plot total errors + summary statistics
-  if (total_err.size()>0) {
-    char prefix[16];
-    sprintf(prefix,"avg");
-    saveErrorPlots(total_err,plot_error_dir,prefix);
-    plotErrorPlots(plot_error_dir,prefix);
-    saveStats(total_err,result_dir);
-  }
-
-  // success
+    // success
     return true;
 }
