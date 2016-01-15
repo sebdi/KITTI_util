@@ -54,7 +54,7 @@ KITTI::KITTI(int sequence, int max, int startOffset) : sequence(sequence)
 void KITTI::writeResult(std::vector<Eigen::Matrix4d> Ts)
 {
     std::stringstream filename;
-    filename << "03" << ".txt";
+    filename << "01" << ".txt";
     std::string file = filename.str();
 
     std::ofstream myfile;
@@ -523,4 +523,45 @@ bool KITTI::eval (std::vector<Eigen::Matrix4d> & T_result) {
 
     // success
     return true;
+}
+
+cv::Scalar KITTI::getRainbow(double depth)
+{
+    double r = (5-depth) * 255 / 5.0; if(r < 0) r = -r;
+    double g = (10-depth) * 255 / 5.0; if(g < 0) g = -g;
+    double b = (20-depth) * 255 / 10.0; if(b < 0) b = -b;
+
+    uchar rc = r < 0 ? 0 : (r > 255 ? 255 : r);
+    uchar gc = g < 0 ? 0 : (g > 255 ? 255 : g);
+    uchar bc = b < 0 ? 0 : (b > 255 ? 255 : b);
+
+    return cv::Scalar(255-rc,255-gc,255-bc);
+}
+
+void KITTI::plotRainbow(cv::Mat & image, std::vector<veloPoint> & velpoints,  Eigen::Matrix4d &T, Eigen::Matrix3Xd & P0)
+{
+    Eigen::Vector4d X;
+    Eigen::Vector4d X_temp;
+    Eigen::Vector3d x;
+    int width = image.cols;
+    int height = image.rows;
+    cv::Mat debug = cv::Mat(height,width,CV_8UC3);
+    cv::cvtColor(image, debug, CV_GRAY2RGB);
+    for (size_t j=0;j<velpoints.size();j++)
+    {
+        X << velpoints[j].x, velpoints[j].y, velpoints[j].z, 1;
+        X_temp = T * X;
+        double depth = X_temp(2);
+
+        if (X_temp(2)>0)
+        {
+            x = P0 * T * X;
+            x = x/x(2);
+            cv::Scalar color = getRainbow(depth);
+            cv::circle(debug, cv::Point2f(x(0), x(1)), 1, color, 1, 8,0);
+        }
+    }
+    cv::imshow("Image", debug);
+    cv::waitKey(1000000);
+    //cv::destroyWindow("Image");
 }

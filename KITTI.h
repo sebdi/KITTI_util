@@ -130,8 +130,9 @@ public:
         rotToOpenCV(1,1) = -1;
         rotToOpenCV(2,2) = 1;
         rotToOpenCV(0,1) = rotToOpenCV(0,2) = rotToOpenCV(0,3) = rotToOpenCV(1,0) = rotToOpenCV(1,2) = rotToOpenCV(1,3) = rotToOpenCV(2,0) = rotToOpenCV(2,1) = rotToOpenCV(2,3) = 0;
-        in = in * rotToOpenCV.inverse();
+        in = in * rotToOpenCV;
     }
+    void plotRainbow(cv::Mat & image, std::vector<veloPoint> & velpoints,  Eigen::Matrix4d &T, Eigen::Matrix3Xd & P0);
 private:
     int sequence;
     void createPointCloud2(sensor_msgs::PointCloud2 & outPC, std::vector<veloPoint> & veloPoints);
@@ -510,6 +511,6 @@ private:
     }
 
 
-
+    cv::Scalar getRainbow(double depth);
 
 };
