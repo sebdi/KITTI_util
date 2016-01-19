@@ -99,6 +99,7 @@ public:
     void getPointCloud(pcl::PointCloud<pcl::PointXYZ> & msg, int i);
     void getVeloPC(pcl::PointCloud<pcl::PointXYZ> & msg, std::vector<veloPoint> & veloPoints);
     int getOneVel(std::vector<veloPoint> &points, int j);
+    int getOneVel(pcl::PointCloud<pcl::PointXYZ>::Ptr pc, int i);
 
     int getGtCameraPoses(std::vector<Eigen::Matrix3d> &Rs, std::vector<Eigen::Vector3d> &ts);
     void getGtCameraPoses(std::vector<Eigen::Matrix4d> &Ts, int startOffset = 0);
@@ -133,6 +134,9 @@ public:
         in = in * rotToOpenCV;
     }
     void plotRainbow(cv::Mat & image, std::vector<veloPoint> & velpoints,  Eigen::Matrix4d &T, Eigen::Matrix3Xd & P0);
+
+    void dispLidarInImage(pcl::PointCloud<pcl::PointXYZHSV>::Ptr pc, int id);
+    void dispLidarInImage(pcl::PointCloud<pcl::PointXYZ>::Ptr pc, int id);
 private:
     int sequence;
     void createPointCloud2(sensor_msgs::PointCloud2 & outPC, std::vector<veloPoint> & veloPoints);

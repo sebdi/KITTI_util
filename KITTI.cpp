@@ -127,6 +127,14 @@ int KITTI::getVel(std::vector<std::string> &files, std::vector<std::vector<veloP
     return points.size();
 }
 
+int KITTI::getOneVel(pcl::PointCloud<pcl::PointXYZ>::Ptr pc, int i)
+{
+    std::vector<veloPoint> velpoints;
+    int size = getOneVel(velpoints,i);
+    getVeloPC(*pc,velpoints);
+    return size;
+}
+
 int KITTI::getOneVel(std::vector<veloPoint> &points, int j)
 {
     // allocate 4 MB buffer (only ~130*4*4 KB are needed)
@@ -281,8 +289,6 @@ void KITTI::getVeloPC(pcl::PointCloud<pcl::PointXYZ> & msg, std::vector<veloPoin
     }
 
     msg.width = msg.points.size();
-    Eigen::Matrix4d T = getVelo_to_cam_T();
-    pcl::transformPointCloud (msg, msg, T);
 }
 
 
@@ -563,5 +569,72 @@ void KITTI::plotRainbow(cv::Mat & image, std::vector<veloPoint> & velpoints,  Ei
     }
     cv::imshow("Image", debug);
     cv::waitKey(1000000);
+    //cv::destroyWindow("Image");
+}
+
+void KITTI::dispLidarInImage(pcl::PointCloud<pcl::PointXYZHSV>::Ptr pc, int id)
+{
+    Eigen::Vector4d X;
+    Eigen::Vector4d X_temp;
+    Eigen::Vector3d x;
+    Eigen::Matrix3Xd P0(3,4);
+    P0 = getP0();
+    Eigen::Matrix4d T = get_T_velo_to_cam();
+    cv::Mat image = getImage_0(id);
+    int width = image.cols;
+    int height = image.rows;
+    cv::Mat debug = cv::Mat(height,width,CV_8UC3);
+    cv::cvtColor(image, debug, CV_GRAY2RGB);
+    for (size_t j=0;j<pc->size();j++)
+    {
+        X << pc->points[j].x, pc->points[j].y, pc->points[j].z, 1;
+        X_temp = T * X;
+        double depth = X_temp(2);
+
+        if (X_temp(2)>0)
+        {
+            x = P0 * T * X;
+            x = x/x(2);
+            cv::Scalar color = getRainbow(depth);
+            cv::circle(debug, cv::Point2f(x(0), x(1)), 1, color, 1, 8,0);
+        }
+    }
+    cv::imshow("Image", debug);
+    cv::waitKey(1000000);
+
+    //cv::destroyWindow("Image");
+}
+
+void KITTI::dispLidarInImage(pcl::PointCloud<pcl::PointXYZ>::Ptr pc, int id)
+{
+    Eigen::Vector4d X;
+    Eigen::Vector4d X_temp;
+    Eigen::Vector3d x;
+    Eigen::Matrix3Xd P0(3,4);
+    P0 = getP0();
+    Eigen::Matrix4d T = get_T_velo_to_cam();
+    cv::Mat image = getImage_0(id);
+    int width = image.cols;
+    int height = image.rows;
+    cv::Mat debug = cv::Mat(height,width,CV_8UC3);
+    cv::cvtColor(image, debug, CV_GRAY2RGB);
+    for (size_t j=0;j<pc->size();j++)
+    {
+        X << pc->points[j].x, pc->points[j].y, pc->points[j].z, 1;
+        X_temp = T * X;
+        double depth = X_temp(2);
+
+        if (X_temp(2)>0)
+        {
+            x = P0 * T * X;
+            x = x/x(2);
+            cv::Scalar color = getRainbow(depth);
+            cv::circle(debug, cv::Point2f(x(0), x(1)), 1, color, 1, 8,0);
+        }
+    }
+
+    cv::imshow("Image", debug);
+    cv::waitKey(1000000);
+
     //cv::destroyWindow("Image");
 }
