@@ -30,7 +30,7 @@ std::string &trim(std::string &s) {
     return ltrim(rtrim(s));
 }
 
-KITTI::KITTI(int sequence, int max, int startOffset) : sequence(sequence)
+KITTI::KITTI(int sequence, int max, int startOffset) : sequence(sequence) , startOffset(startOffset)
 {
     std::stringstream ss;
     ss << std::setw(2) << std::setfill('0') << sequence;
@@ -42,13 +42,15 @@ KITTI::KITTI(int sequence, int max, int startOffset) : sequence(sequence)
     result_dir = "/home/sebastian/Dropbox/KITTI/results";
     getFiles(path_to_velo, velo_files);
     velo_files.resize(max);
+    velo_files.erase(velo_files.begin(), velo_files.begin() + startOffset);
     getFiles(path_to_image_0, image_0_files);
     width = 1240;
     height = 376;
     seq_size = velo_files.size();
 
-    getGtCameraPoses(gt_T,startOffset);
-    gt_T.resize(max-startOffset);
+    getGtCameraPoses(gt_T);
+    gt_T.resize(max);
+    gt_T.erase(gt_T.begin(), gt_T.begin() + startOffset);
 }
 
 void KITTI::writeResult(std::vector<Eigen::Matrix4d> Ts)
@@ -137,6 +139,8 @@ int KITTI::getOneVel(pcl::PointCloud<pcl::PointXYZ>::Ptr pc, int i)
 
 int KITTI::getOneVel(std::vector<veloPoint> &points, int j)
 {
+    int idx = j-startOffset;
+
     // allocate 4 MB buffer (only ~130*4*4 KB are needed)
     int32_t num = 1000000;
     float *data = (float*)malloc(num*sizeof(float));
@@ -149,7 +153,7 @@ int KITTI::getOneVel(std::vector<veloPoint> &points, int j)
 
     // load point cloud
     FILE *stream;
-    stream = fopen (velo_files[j].c_str(),"rb");
+    stream = fopen (velo_files[idx].c_str(),"rb");
     num = fread(data,sizeof(float),num,stream)/4;
 
     for (int32_t i=0; i<num; i++) {
@@ -345,12 +349,12 @@ void KITTI::getGtCameraPosesAsNavMsg(std::vector<nav_msgs::Odometry> &out)
     }
 }
 
-void KITTI::getGtCameraPoses(std::vector<Eigen::Matrix4d> &Ts, int startOffset)
+void KITTI::getGtCameraPoses(std::vector<Eigen::Matrix4d> &Ts)
 {
     std::vector<Eigen::Matrix3d> Rs;
     std::vector<Eigen::Vector3d> ts;
     getGtCameraPoses(Rs,ts);
-    for (int i=startOffset;i<Rs.size();i++)
+    for (int i=0;i<Rs.size();i++)
     {
         Eigen::Matrix3d velo_to_cam_R = Rs[i];
         Eigen::Vector3d velo_to_cam_t = ts[i];

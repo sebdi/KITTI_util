@@ -102,7 +102,7 @@ public:
     int getOneVel(pcl::PointCloud<pcl::PointXYZ>::Ptr pc, int i);
 
     int getGtCameraPoses(std::vector<Eigen::Matrix3d> &Rs, std::vector<Eigen::Vector3d> &ts);
-    void getGtCameraPoses(std::vector<Eigen::Matrix4d> &Ts, int startOffset = 0);
+    void getGtCameraPoses(std::vector<Eigen::Matrix4d> &Ts);
     void getGtCameraPosesAsNavMsg(std::vector<nav_msgs::Odometry> &out);
 
     void writeResult(std::vector<Eigen::Matrix4d> Ts);
@@ -116,11 +116,29 @@ public:
     Eigen::Matrix4d get_T_velo_to_cam();
     Eigen::Matrix4d getVelo_to_cam_T();
     int size() {return seq_size;}
-    Eigen::Matrix4d getGroundTruth(int i) {return gt_T[i];}
+    Eigen::Matrix4d getGroundTruthByID(int id)
+    {
+        int idx = id-startOffset;
+        return gt_T[idx];
+    }
+    Eigen::Matrix4d getGroundTruthDeltaByID(int id)
+    {
+        int idx = id-startOffset;
+        if (idx>0)
+            return poseDelta(gt_T[idx-1], gt_T[idx]);
+        else
+            return Eigen::Matrix4d::Identity();
+    }
     Eigen::Matrix4d computeError(std::vector<Eigen::Matrix4d> & T_result)
     {
         Eigen::Matrix4d delta_T_result = poseDelta(T_result[0],T_result.back());
         Eigen::Matrix4d delta_T_gt = poseDelta(gt_T[0],gt_T.back());
+        return poseDelta(delta_T_result,delta_T_gt);
+    }
+    Eigen::Matrix4d computeError(std::vector<Eigen::Matrix4d> & T_first,std::vector<Eigen::Matrix4d> & T_second)
+    {
+        Eigen::Matrix4d delta_T_result = poseDelta(T_first[0],T_first.back());
+        Eigen::Matrix4d delta_T_gt = poseDelta(T_second[0],T_second.back());
         return poseDelta(delta_T_result,delta_T_gt);
     }
     bool eval(std::vector<Eigen::Matrix4d> & T_result);
@@ -137,8 +155,14 @@ public:
 
     void dispLidarInImage(pcl::PointCloud<pcl::PointXYZHSV>::Ptr pc, int id);
     void dispLidarInImage(pcl::PointCloud<pcl::PointXYZ>::Ptr pc, int id);
+    Eigen::Matrix4d poseDelta(Eigen::Matrix4d &T_first, Eigen::Matrix4d &T_last)
+    {
+        Eigen::Matrix4d T_delta = T_first.inverse()*T_last;
+        return T_delta;
+    }
 private:
     int sequence;
+    int startOffset;
     void createPointCloud2(sensor_msgs::PointCloud2 & outPC, std::vector<veloPoint> & veloPoints);
     Eigen::Matrix3d getVelo_to_cam_R();
     Eigen::Vector3d getVelo_to_cam_t();
@@ -174,11 +198,7 @@ private:
         return sqrt(dx*dx+dy*dy+dz*dz);
     }
 
-    Eigen::Matrix4d poseDelta(Eigen::Matrix4d &T_first, Eigen::Matrix4d &T_last)
-    {
-        Eigen::Matrix4d T_delta = T_first.inverse()*T_last;
-        return T_delta;
-    }
+
 
     std::vector<errors> calcSequenceErrors (std::vector<Eigen::Matrix4d> &T_result,std::vector<Eigen::Matrix4d> &T_gt) {
 
