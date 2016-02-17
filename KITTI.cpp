@@ -473,6 +473,16 @@ Eigen::Matrix4d KITTI::get_T_velo_to_cam()
     return T;
 }
 
+void KITTI::plotDeltaPoses(std::vector<Eigen::Matrix4d> & T_result, int i)
+{
+    std::string plot_delta_dir = result_dir + "/plot_error";
+    // save + plot individual errors
+    char prefix[16];
+    sprintf(prefix,"%02d",i);
+    saveDeltaError(T_result,plot_delta_dir,prefix);
+    plotDeltaPlots(plot_delta_dir,prefix);
+}
+
 bool KITTI::eval (std::vector<Eigen::Matrix4d> & T_result) {
     std::string error_dir      = result_dir + "/errors";
     std::string plot_path_dir  = result_dir + "/plot_path";

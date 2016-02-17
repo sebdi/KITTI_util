@@ -85,7 +85,8 @@ struct errors {
 };
 
 //float lengths[] = {100,200,300,400,500,600,700,800};
-float lengths[] = {5,10,50,100,150,200,250,300,350,400};
+//float lengths[] = {5,10,50,100,150,200,250,300,350,400};
+float lengths[] = {5,10,15,20,25,30,35,40,45,400};
 int32_t num_lengths = 8;
 
 class KITTI
@@ -129,10 +130,10 @@ public:
         else
             return Eigen::Matrix4d::Identity();
     }
-    Eigen::Matrix4d computeError(std::vector<Eigen::Matrix4d> & T_result)
+    Eigen::Matrix4d computeError(std::vector<Eigen::Matrix4d> & T_result, int idx)
     {
-        Eigen::Matrix4d delta_T_result = poseDelta(T_result[0],T_result.back());
-        Eigen::Matrix4d delta_T_gt = poseDelta(gt_T[0],gt_T.back());
+        Eigen::Matrix4d delta_T_result = poseDelta(T_result[0],T_result[idx]);
+        Eigen::Matrix4d delta_T_gt = poseDelta(gt_T[0],gt_T[idx]);
         return poseDelta(delta_T_result,delta_T_gt);
     }
     Eigen::Matrix4d computeError(std::vector<Eigen::Matrix4d> & T_first,std::vector<Eigen::Matrix4d> & T_second)
@@ -160,6 +161,7 @@ public:
         Eigen::Matrix4d T_delta = T_first.inverse()*T_last;
         return T_delta;
     }
+    void plotDeltaPoses(std::vector<Eigen::Matrix4d> & T_result, int i);
 private:
     int sequence;
     int startOffset;
@@ -230,9 +232,10 @@ private:
                     continue;
 
                 // compute rotational and translational errors
-                Eigen::Matrix4d T_error = computeError(T_result);
+                Eigen::Matrix4d T_error = computeError(T_result,last_frame);
                 double r_err = rotationError(T_error);
                 double t_err = translationError(T_error);
+                //std::cout << "t_err:" << t_err << std::endl;
 
                 // compute speed
                 float num_frames = (float)(last_frame-first_frame+1);
@@ -352,6 +355,75 @@ private:
         system(command);
     }
 
+    void plotDeltaPlots (std::string dir,char* prefix) {
+
+        char command[1024];
+
+
+        // create suffix
+        char suffix[16];
+        std::sprintf(suffix,"t_error");
+
+
+
+        // gnuplot file name
+        char file_name[1024]; char full_name[1024];
+        std::sprintf(file_name,"%s_%s.gp",prefix,suffix);
+        std::sprintf(full_name,"%s/%s",dir.c_str(),file_name);
+
+        // create png + eps
+        for (int32_t j=0; j<2; j++) {
+
+            // open file
+            FILE *fp = fopen(full_name,"w");
+
+            // save gnuplot instructions
+            if (j==0) {
+                fprintf(fp,"set term png size 500,250 font \"Helvetica\" 11\n");
+                fprintf(fp,"set output \"%s_%s.png\"\n",prefix,suffix);
+            } else {
+                fprintf(fp,"set term postscript eps enhanced color\n");
+                fprintf(fp,"set output \"%s_%s.eps\"\n",prefix,suffix);
+            }
+
+            // start plot at 0
+            fprintf(fp,"set size ratio 0.5\n");
+            fprintf(fp,"set yrange [0:*]\n");
+
+            // x label
+            fprintf(fp,"set xlabel \"Path Length [m]\"\n");
+
+
+            // y label
+            fprintf(fp,"set ylabel \"Translation Error [%%]\"\n");
+
+
+            // plot error curve
+            fprintf(fp,"plot \"%s_%s.txt\" using ",prefix,suffix);
+
+            fprintf(fp,"1:($2*100) title 'Translation Error'");
+
+
+            fprintf(fp," lc rgb \"#0000FF\" pt 4 w linespoints\n");
+
+            // close file
+            fclose(fp);
+
+            // run gnuplot => create png + eps
+            std::sprintf(command,"cd %s; gnuplot %s",dir.c_str(),file_name);
+            system(command);
+        }
+
+        // create pdf and crop
+        std::sprintf(command,"cd %s; ps2pdf %s_%s.eps %s_%s_large.pdf",dir.c_str(),prefix,suffix,prefix,suffix);
+        system(command);
+        std::sprintf(command,"cd %s; pdfcrop %s_%s_large.pdf %s_%s.pdf",dir.c_str(),prefix,suffix,prefix,suffix);
+        system(command);
+        std::sprintf(command,"cd %s; rm %s_%s_large.pdf",dir.c_str(),prefix,suffix);
+        system(command);
+
+    }
+
     void plotErrorPlots (std::string dir,char* prefix) {
 
         char command[1024];
@@ -443,6 +515,34 @@ private:
 
                     // close file
                     fclose(fp);
+    }
+
+    void saveDeltaError(std::vector<Eigen::Matrix4d> & T_result,std::string plot_error_dir,char* prefix) {
+
+        // file names
+        char file_name_tl[1024];
+        std::sprintf(file_name_tl,"%s/%s_t_error.txt",plot_error_dir.c_str(),prefix);
+
+
+        // open files
+        FILE *fp_tl = fopen(file_name_tl,"w");
+
+
+        // for each segment length do
+        for (int32_t i=1; i<T_result.size(); i++)
+        {
+
+            float t_err = 0;
+
+            // compute rotational and translational errors
+            Eigen::Matrix4d delta_T_result = poseDelta(T_result[i-1],T_result[i]);
+            Eigen::Matrix4d delta_T_gt = poseDelta(gt_T[i-1],gt_T[i]);
+            Eigen::Matrix4d T_error = poseDelta(delta_T_result,delta_T_gt);
+            t_err = translationError(T_error);
+            fprintf(fp_tl,"%d %f\n",i,t_err);
+        }
+
+        fclose(fp_tl);
     }
 
     void saveErrorPlots(std::vector<errors> &seq_err,std::string plot_error_dir,char* prefix) {
