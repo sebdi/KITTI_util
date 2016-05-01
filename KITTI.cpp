@@ -279,7 +279,7 @@ void KITTI::getVeloPC(pcl::PointCloud<pcl::PointXYZ> & msg, std::vector<veloPoin
     msg.header.stamp = 1;
     msg.header.frame_id = "some_tf_frame";
     msg.height = 1;
-    msg.resize(sizeof(pcl::PointXYZ)*veloPoints.size());
+    //msg.resize(sizeof(pcl::PointXYZ)*veloPoints.size());
     for (int i=0; i<veloPoints.size(); i++)
     {
         //pcl::PointXYZI temp(10.0);
@@ -289,7 +289,14 @@ void KITTI::getVeloPC(pcl::PointCloud<pcl::PointXYZ> & msg, std::vector<veloPoin
         temp.z = veloPoints[i].z;
         //temp.intensity = veloPoints[i].i;
 
-        msg.points.push_back (temp);
+        if (fabs(temp.x) > 0.2f || fabs(temp.y) > 0.2f || fabs(temp.z) > 0.2f)
+        {
+            if ( temp.z > -2.0f)
+            {
+                if (!(fabs(temp.x) < 3.0f && fabs(temp.y) < 3.0f && fabs(temp.z) < 3.0f))
+                    msg.points.push_back (temp);
+            }
+        }
     }
 
     msg.width = msg.points.size();

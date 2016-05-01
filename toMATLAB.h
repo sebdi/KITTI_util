@@ -144,21 +144,45 @@ public:
         oa << BOOST_SERIALIZATION_NVP(test);
     }
 
+    void writePCLToCSV(std::string name, pcl::PointCloud<pcl::PointXYZHSV>::Ptr input)
+    {
+        if (input->points.size() > 0)
+        {
+            std::stringstream filename;
+            filename << name << ".csv";
+            std::string file = filename.str();
+
+            std::ofstream myfile;
+            myfile.open (file);
+
+            for (int i=0;i<input->points.size();i++)
+            {
+                myfile << input->points[i].x << "," << input->points[i].y << "," << input->points[i].z << "\n";
+            }
+
+            myfile.close();
+        }
+    }
+
     void writePCLToCSV(std::string name, pcl::PointCloud<pcl::PointXYZ>::Ptr input)
     {
-        std::stringstream filename;
-        filename << name << ".csv";
-        std::string file = filename.str();
-
-        std::ofstream myfile;
-        myfile.open (file);
-
-        for (int i=0;i<input->points.size();i++)
+        if (input->points.size() > 0)
         {
-            myfile << input->points[i].x << input->points[i].y << input->points[i].z << "\n";
-        }
+            std::stringstream filename;
+            filename << name << ".csv";
+            std::string file = filename.str();
 
-        myfile.close();
+            std::ofstream myfile;
+            myfile.open (file);
+
+            for (int i=0;i<input->points.size();i++)
+            {
+                if (input->points[i].x>0.1 || input->points[i].y>0.1 || input->points[i].z>0.1)
+                myfile << input->points[i].x << "," << input->points[i].y << "," << input->points[i].z << "\n";
+            }
+
+            myfile.close();
+        }
     }
 };
 
