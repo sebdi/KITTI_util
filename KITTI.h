@@ -84,9 +84,9 @@ struct errors {
         first_frame(first_frame),r_err(r_err),t_err(t_err),len(len),speed(speed) {}
 };
 
-//float lengths[] = {100,200,300,400,500,600,700,800};
+float lengths[] = {100,200,300,400,500,600,700,800};
 //float lengths[] = {5,10,50,100,150,200,250,300,350,400};
-float lengths[] = {5,10,15,20,25,30,35,40,45,400};
+//float lengths[] = {5,10,15,20,25,30,35,40,45,400};
 int32_t num_lengths = 8;
 
 class KITTI
@@ -153,7 +153,7 @@ public:
         in = rotToOpenCV * in;
     }
     void plotRainbow(cv::Mat & image, std::vector<veloPoint> & velpoints,  Eigen::Matrix4d &T, Eigen::Matrix3Xd & P0);
-
+    void plotRainbow(cv::Mat & image, pcl::PointCloud<pcl::PointXYZ>::Ptr pc);
     void dispLidarInImage(pcl::PointCloud<pcl::PointXYZHSV>::Ptr pc, int id);
     void dispLidarInImage(pcl::PointCloud<pcl::PointXYZ>::Ptr pc, int id);
     Eigen::Matrix4d poseDelta(Eigen::Matrix4d &T_first, Eigen::Matrix4d &T_last)

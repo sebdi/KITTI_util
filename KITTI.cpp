@@ -41,15 +41,21 @@ KITTI::KITTI(int sequence, int max, int startOffset) : sequence(sequence) , star
     pathPoses = "/home/sebastian/Dropbox/KITTI/poses/" + seq_prefix + ".txt";
     result_dir = "/home/sebastian/Dropbox/KITTI/results";
     getFiles(path_to_velo, velo_files);
-    velo_files.resize(max);
+    if (max > velo_files.size())
+        velo_files.resize(velo_files.size());
+    else
+        velo_files.resize(max);
     velo_files.erase(velo_files.begin(), velo_files.begin() + startOffset);
     getFiles(path_to_image_0, image_0_files);
     width = 1240;
     height = 376;
-    seq_size = velo_files.size();
+    seq_size = startOffset + velo_files.size();
 
     getGtCameraPoses(gt_T);
-    gt_T.resize(max);
+    if (max > gt_T.size())
+        gt_T.resize(gt_T.size() -1);
+    else
+        gt_T.resize(max);
     gt_T.erase(gt_T.begin(), gt_T.begin() + startOffset);
 }
 
@@ -577,6 +583,38 @@ void KITTI::plotRainbow(cv::Mat & image, std::vector<veloPoint> & velpoints,  Ei
     for (size_t j=0;j<velpoints.size();j++)
     {
         X << velpoints[j].x, velpoints[j].y, velpoints[j].z, 1;
+        X_temp = T * X;
+        double depth = X_temp(2);
+
+        if (X_temp(2)>0)
+        {
+            x = P0 * T * X;
+            x = x/x(2);
+            cv::Scalar color = getRainbow(depth);
+            cv::circle(debug, cv::Point2f(x(0), x(1)), 1, color, 1, 8,0);
+        }
+    }
+    cv::imshow("Image", debug);
+    cv::waitKey(1000000);
+    //cv::destroyWindow("Image");
+}
+
+void KITTI::plotRainbow(cv::Mat & image, pcl::PointCloud<pcl::PointXYZ>::Ptr pc)
+{
+    Eigen::Vector4d X;
+    Eigen::Vector4d X_temp;
+    Eigen::Vector3d x;
+    int width = image.cols;
+    int height = image.rows;
+    cv::Mat debug = cv::Mat(height,width,CV_8UC3);
+    cv::cvtColor(image, debug, CV_GRAY2RGB);
+    Eigen::Matrix3Xd P0(3,4);
+    P0 = getP0();
+    //Eigen::Matrix4d T = get_T_velo_to_cam();
+    Eigen::Matrix4d T = Eigen::Matrix4d::Identity();
+    for (size_t j=0;j<pc->points.size();j++)
+    {
+        X << pc->points[j].x, pc->points[j].y, pc->points[j].z, 1;
         X_temp = T * X;
         double depth = X_temp(2);
 
