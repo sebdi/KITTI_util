@@ -63,6 +63,11 @@ void KITTI::writeResult(std::vector<Eigen::Matrix4d> Ts)
 {
     std::stringstream filename;
     filename << "01" << ".txt";
+    writeResult(Ts,filename);
+}
+
+void KITTI::writeResult(std::vector<Eigen::Matrix4d> Ts, std::stringstream & filename)
+{
     std::string file = filename.str();
 
     std::ofstream myfile;

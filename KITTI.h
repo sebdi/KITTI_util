@@ -107,6 +107,7 @@ public:
     void getGtCameraPosesAsNavMsg(std::vector<nav_msgs::Odometry> &out);
 
     void writeResult(std::vector<Eigen::Matrix4d> Ts);
+    void writeResult(std::vector<Eigen::Matrix4d> Ts, std::stringstream &filename);
 
 
     Eigen::Matrix3f getK();
