@@ -140,7 +140,9 @@ int KITTI::getVel(std::vector<std::string> &files, std::vector<std::vector<veloP
     return points.size();
 }
 
-int KITTI::getOneVel(pcl::PointCloud<pcl::PointXYZ>::Ptr pc, int i)
+/** \brief Reads a point cloud from the KITTI file */
+//TODO Should be done with allocating memory
+int KITTI::getPointCloudByIndex(pcl::PointCloud<pcl::PointXYZ>::Ptr pc, int i)
 {
     std::vector<veloPoint> velpoints;
     int size = getOneVel(velpoints,i);
@@ -148,6 +150,8 @@ int KITTI::getOneVel(pcl::PointCloud<pcl::PointXYZ>::Ptr pc, int i)
     return size;
 }
 
+/** \brief Reads a point cloud from the KITTI file */
+//TODO Think about reneaming method
 int KITTI::getOneVel(std::vector<veloPoint> &points, int j)
 {
     int idx = j-startOffset;
@@ -283,6 +287,8 @@ void KITTI::createPointCloud2(sensor_msgs::PointCloud2 & outPC, std::vector<velo
     msg.clear();
 }
 
+/** \brief Tranforms veloPoint in PCL PointXYZ cloud  */
+//TODO Comment the source of the filter
 void KITTI::getVeloPC(pcl::PointCloud<pcl::PointXYZ> & msg, std::vector<veloPoint> & veloPoints)
 {
     msg.is_dense = true;
@@ -328,6 +334,7 @@ Eigen::Vector3d KITTI::getVelo_to_cam_t(){
     return v;
 }
 
+/** \brief Get transformation matrix T. */
 Eigen::Matrix4d KITTI::getVelo_to_cam_T()
 {
     Eigen::Matrix3d velo_to_cam_R = getVelo_to_cam_R();

@@ -100,7 +100,7 @@ public:
     void getPointCloud(pcl::PointCloud<pcl::PointXYZ> & msg, int i);
     void getVeloPC(pcl::PointCloud<pcl::PointXYZ> & msg, std::vector<veloPoint> & veloPoints);
     int getOneVel(std::vector<veloPoint> &points, int j);
-    int getOneVel(pcl::PointCloud<pcl::PointXYZ>::Ptr pc, int i);
+    int getPointCloudByIndex(pcl::PointCloud<pcl::PointXYZ>::Ptr pc, int i);
 
     int getGtCameraPoses(std::vector<Eigen::Matrix3d> &Rs, std::vector<Eigen::Vector3d> &ts);
     void getGtCameraPoses(std::vector<Eigen::Matrix4d> &Ts);
