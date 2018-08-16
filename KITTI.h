@@ -92,7 +92,7 @@ int32_t num_lengths = 8;
 class KITTI
 {
 public:
-    KITTI(int sequence, int max, int startOffset);
+    KITTI(int sequence, int max, int startOffset, std::string base_path);
 
     // methods for velodyne data
     int getVel(std::vector<std::string> &files, std::vector<std::vector<veloPoint> > &points, int num, int start);
@@ -163,6 +163,11 @@ public:
         return T_delta;
     }
     void plotDeltaPoses(std::vector<Eigen::Matrix4d> & T_result, int i);
+
+    // helper functions to print something on the console
+    void printTransformationmatrix(Eigen::Matrix4d T);
+
+
 private:
     int sequence;
     int startOffset;
@@ -172,11 +177,13 @@ private:
     std::vector<std::string> image_0_files;
     int width;
     int height;
+    std::string base_path;
     std::string path_to_image_0;
     std::string path_to_image_2;
     std::string path_to_velo;
     std::string pathPoses;
     std::string result_dir;
+
 
     std::vector<std::string> velo_files;
     std::vector<std::vector<veloPoint>> velpoints;

@@ -30,16 +30,16 @@ std::string &trim(std::string &s) {
     return ltrim(rtrim(s));
 }
 
-KITTI::KITTI(int sequence, int max, int startOffset) : sequence(sequence) , startOffset(startOffset)
+KITTI::KITTI(int sequence, int max, int startOffset, std::string base_path) : sequence(sequence) , startOffset(startOffset) , base_path(base_path)
 {
     std::stringstream ss;
     ss << std::setw(2) << std::setfill('0') << sequence;
     std::string seq_prefix = ss.str();
-    path_to_image_0 = "/home/sebastian/Dropbox/KITTI/sequences/" + seq_prefix + "/image_0/";
-    path_to_image_2 = "/home/sebastian/Dropbox/KITTI/sequences/" + seq_prefix + "/image_2/";
-    path_to_velo = "/home/sebastian/Dropbox/KITTI/velo/" + seq_prefix;
-    pathPoses = "/home/sebastian/Dropbox/KITTI/poses/" + seq_prefix + ".txt";
-    result_dir = "/home/sebastian/Dropbox/KITTI/results";
+    path_to_image_0 = base_path + "/sequences/" + seq_prefix + "/image_0/";
+    path_to_image_2 = base_path + "/sequences/" + seq_prefix + "/image_2/";
+    path_to_velo = base_path + "/velo/" + seq_prefix;
+    pathPoses = base_path + "/poses/" + seq_prefix + ".txt";
+    result_dir = base_path + "/results";
     getFiles(path_to_velo, velo_files);
     if (max > velo_files.size())
         velo_files.resize(velo_files.size());
@@ -504,6 +504,10 @@ void KITTI::plotDeltaPoses(std::vector<Eigen::Matrix4d> & T_result, int i)
     // save + plot individual errors
     char prefix[16];
     sprintf(prefix,"%02d",i);
+
+    // create output directories
+    system(("mkdir " + plot_delta_dir).c_str());
+
     saveDeltaError(T_result,plot_delta_dir,prefix);
     plotDeltaPlots(plot_delta_dir,prefix);
 }
@@ -708,4 +712,12 @@ void KITTI::dispLidarInImage(pcl::PointCloud<pcl::PointXYZ>::Ptr pc, int id)
     cv::waitKey(1000000);
 
     //cv::destroyWindow("Image");
+}
+
+void printTransformationmatrix(Eigen::Matrix4d T)
+{
+    std::cout << T(0,0) << " " << T(0,1) << " " << T(0,2) << " " << T(0,3) << std::endl;
+    std::cout << T(1,0) << " " << T(1,1) << " " << T(1,2) << " " << T(1,3) << std::endl;
+    std::cout << T(2,0) << " " << T(2,1) << " " << T(2,2) << " " << T(2,3) << std::endl;
+    std::cout << T(3,0) << " " << T(3,1) << " " << T(3,2) << " " << T(3,3) << std::endl;
 }
